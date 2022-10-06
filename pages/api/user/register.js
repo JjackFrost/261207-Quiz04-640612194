@@ -9,6 +9,15 @@ export default function userRegisterRoute(req, res) {
     //check authentication
     const user = checkToken(req);
     //return res.status(403).json({ok: false,message: "You do not have permission to create account",});
+    if (isAdmin) {
+      const user = checkToken(req);
+      if (!user || !user.isAdmin) {
+        return res.status(403).json({
+          ok: false,
+          message: "You do not have permission to create account",
+        });
+      }
+    }
 
     //validate body
     if (
@@ -24,12 +33,25 @@ export default function userRegisterRoute(req, res) {
 
     //check if username is already in database
     const users = readUsersDB();
+    const foundUser = users.find((x) => x.username === username);
+    if (foundUser)
+      return res
+        .status(400)
+        .json({ ok: false, message: "Username is already taken" });
     //return res.status(400).json({ ok: false, message: "Username is already taken" });
 
     //create new user and add in db
+    const newUser = {
+      username,
+      password: bcrypt.hashSync(password, 12),
+      isAdmin: isAdmin,
+      money: isAdmin ? null : 0,
+    };
 
+    users.push(newUser);
     writeUsersDB(users);
 
     //return response
+    return res.json({ ok: true, username, isAdmin });
   }
 }
